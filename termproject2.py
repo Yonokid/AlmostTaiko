@@ -236,18 +236,18 @@ def draw_judge_circle(app):
     drawCircle(app.p1_judge_x, app.p1_judge_y, 50 * app.scale_factor, fill=None, border=rgb(56,56,56))
         
 def draw_note(app, player, note, position):
+    if note == 'barline':
+        drawLine(position, app.p1_gray_bgY, position, app.p1_gray_bgY+((app.p1_gray_bgY/5)*4), fill=rgb(133,131,132), lineWidth=3)
+        return
+    if note == '1' or note == '3':
+        note_color = rgb(224,56,39)
+        name = 'Do'
+    elif note == '2' or note == '4':
+        note_color = rgb(78,210,193)
+        name = 'Ka'
+    else:
+        return
     if player == 1:
-        if note == 'barline':
-            drawLine(position, app.p1_gray_bgY, position, app.p1_gray_bgY+((app.p1_gray_bgY/5)*4), fill=rgb(133,131,132), lineWidth=3)
-            return
-        if note == '1' or note == '3':
-            note_color = rgb(224,56,39)
-            name = 'Do'
-        elif note == '2' or note == '4':
-            note_color = rgb(78,210,193)
-            name = 'Ka'
-        else:
-            return
         drawCircle(position, app.p1_judge_y, 35 * app.scale_factor, fill=note_color, border='white', borderWidth=5) 
         #drawCircle(position, app.p1_judge_y, 37 * app.scale_factor, fill=None, border='black', borderWidth=2) 
         drawLabel(name, position, app.p1_judge_y+93 * app.scale_factor, fill='white', border='black', size=20, borderWidth=1.5, bold=True)

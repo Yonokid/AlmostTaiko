@@ -135,7 +135,7 @@ class tja_parser:
                         note_list.append({'note': note, 'ms': note_ms, 'load_ms': (note_ms - (distance / pixels_per_ms))})
                     self.current_ms += increment
             note_list.append({'note': 'barline', 'ms': bar_ms, 'load_ms': (bar_ms - (distance / pixels_per_ms))})
-            #print(f'Bar: {i}, {bar_ms}, {temp_note_list}')
+            #print(f'Bar: {i}, {bar_ms}, {(bar_ms - (distance / pixels_per_ms))}')
         #print(note_list)
         return(note_list)
 
@@ -193,7 +193,7 @@ def onStep(app):
             app.note_index += 1
         if len(app.curr_notes) != 0:
             if app.curr_notes[0]['ms'] + app.timing_bad < app.current_ms:
-                #print(f'removed {app.curr_notes[0]}')
+                print(f'removed {app.curr_notes[0]}')
                 app.curr_notes.pop(0)
 
 def check_note(app, note_type):
@@ -234,13 +234,12 @@ def draw_judge_circle(app):
     drawCircle(app.p1_judge_x, app.p1_judge_y, 25 * app.scale_factor, fill=rgb(42, 42, 40))
     drawCircle(app.p1_judge_x, app.p1_judge_y, 35 * app.scale_factor, fill=None, border=rgb(91,91,91), borderWidth=4)
     drawCircle(app.p1_judge_x, app.p1_judge_y, 50 * app.scale_factor, fill=None, border=rgb(56,56,56))
-
-def draw_bar(app, player, position):
-    if player == 1:
-        drawLine(position, app.p1_gray_bgY, position, app.p1_gray_bgY+((app.p1_gray_bgY/5)*4), fill=rgb(133,131,132), lineWidth=3)
         
 def draw_note(app, player, note, position):
     if player == 1:
+        if note == 'barline':
+            drawLine(position, app.p1_gray_bgY, position, app.p1_gray_bgY+((app.p1_gray_bgY/5)*4), fill=rgb(133,131,132), lineWidth=3)
+            return
         if note == '1' or note == '3':
             note_color = rgb(224,56,39)
             name = 'Do'
@@ -250,7 +249,7 @@ def draw_note(app, player, note, position):
         else:
             return
         drawCircle(position, app.p1_judge_y, 35 * app.scale_factor, fill=note_color, border='white', borderWidth=5) 
-        #drawCircle(position, app.p1_circleY, 37, fill=None, border='black', borderWidth=2) 
+        #drawCircle(position, app.p1_judge_y, 37 * app.scale_factor, fill=None, border='black', borderWidth=2) 
         drawLabel(name, position, app.p1_judge_y+93 * app.scale_factor, fill='white', border='black', size=20, borderWidth=1.5, bold=True)
         
 def redrawAll(app):
@@ -261,8 +260,6 @@ def redrawAll(app):
         for note in app.curr_notes:
             note_type, note_ms = note['note'], note['ms']
             position = app.width + app.pixels_per_frame * app.stepsPerSecond / 1000 * (note_ms - app.current_ms)
-            if note_type == 'barline':
-                draw_bar(app, 1, position - (app.width - app.p1_judge_x))
             draw_note(app, 1, note_type, position - (app.width - app.p1_judge_x))
     
 def main():

@@ -99,7 +99,8 @@ class tja_parser:
             elif 'SCOREDIFF' in item:
                 item = int(item.split(':')[1])
                 self.course_data[i+highest_diff].append(item)
-        return self.title, self.title_ja, self.subtitle, self.subtitle_ja, self.bpm, self.wave, self.offset, self.demo_start, self.course_data
+            elif '#START' in item:
+                return self.title, self.title_ja, self.subtitle, self.subtitle_ja, self.bpm, self.wave, self.offset, self.demo_start, self.course_data
     
     def data_to_position(self):
         self.file_to_list()
@@ -132,39 +133,6 @@ class tja_parser:
         note_list = []
         bar_list = []
         notes = self.data_to_position()
-        '''
-        for i in range(len(notes)):
-            if i >= len(notes):
-                return note_list
-            bar = notes[i].strip()
-            if '#MEASURE' in bar:
-                self.time_signature = float(int(bar[9])/int(bar[11]))
-                #print(self.time_signature)
-                continue
-            ms_per_measure = 60000 * (self.time_signature*4) / self.bpm
-            
-            pixels_per_frame = get_pixels_per_frame(self.bpm * self.time_signature, self.fps, self.time_signature*4, self.distance)
-            pixels_per_ms = pixels_per_frame / (1000 / self.fps)
-                    
-            bar_ms = self.current_ms
-            load_ms = bar_ms - (self.distance / pixels_per_ms)
-            bar_list.append({'note': 'barline', 'ms': bar_ms, 'load_ms': load_ms, 'ppf': pixels_per_frame})
-            if len(bar) == 0:
-                self.current_ms += ms_per_measure
-            else:
-                increment = ms_per_measure / len(bar)
-                for note in bar:
-                    note_ms = self.current_ms    
-                    #print(f'Note: {note}, {note_ms}')
-                    if note != '0':
-                        pixels_per_frame = get_pixels_per_frame(self.bpm * self.time_signature, self.fps, self.time_signature*4, self.distance)
-                        pixels_per_ms = pixels_per_frame / (1000 / self.fps)
-                        load_ms = note_ms - (self.distance / pixels_per_ms)
-                        note_list.append({'note': note, 'ms': note_ms, 'load_ms': load_ms, 'ppf': pixels_per_frame})
-                    self.current_ms += increment
-            #print(f'Bar: {i}, {bar_ms}, {(bar_ms - (distance / pixels_per_ms))}')
-        #print(note_list)
-        '''
         for bar in notes:
             bar_len = 0
             for part in bar:
@@ -173,10 +141,15 @@ class tja_parser:
                     
             for part in bar:
                 if '#MEASURE' in part:
-                    self.time_signature = float(int(part[9])/int(part[11]))
+                    print(part)
+                    divider = part.find('/')
+                    self.time_signature = float(int(part[9:divider])/int(part[divider+1:]))
                     continue
                 elif '#SCROLL' in part:
                     self.scroll_modifier = float(part[7:])
+                    continue
+                elif '#BPMCHANGE' in part:
+                    self.bpm = float(part[11:])
                     continue
                 elif '#' in part:
                     continue
@@ -307,7 +280,7 @@ def check_note(app, note_type):
         
 def onKeyPress(app, key):
     if key == 'p':
-        play_tja(app, 'SUPERNOVA')
+        play_tja(app, "Souryuu no Ran")
         app.start_ms = get_current_ms() - app.tja.offset*1000
     if key == 'a':
         app.autoplay = not app.autoplay
@@ -416,11 +389,13 @@ def redrawAll(app):
     draw_judge_circle(app)
     draw_judgments(app)
     if app.start_song:
-        for bar in app.curr_bars:
+        for i in range(len(app.curr_bars)-1, -1, -1):
+            bar = app.curr_bars[i]
             bar_ms, pixels_per_frame = bar['ms'], bar['ppf']
             position = app.width + pixels_per_frame * app.stepsPerSecond / 1000 * (bar_ms - app.current_ms + app.judge_offset)
             draw_note(app, 1, 'barline', position - (app.width - app.p1_judge_x))
-        for note in app.curr_notes:
+        for i in range(len(app.curr_notes)-1, -1, -1):
+            note = app.curr_notes[i]
             note_type, note_ms, pixels_per_frame = note['note'], note['ms'], note['ppf']
             position = app.width + pixels_per_frame * app.stepsPerSecond / 1000 * (note_ms - app.current_ms + app.judge_offset)
             draw_note(app, 1, note_type, position - (app.width - app.p1_judge_x))

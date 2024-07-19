@@ -214,7 +214,7 @@ def onAppStart(app):
 def play_tja(app, tja_folder):
     app.tja = tja_parser(tja_folder)
     app.tja.get_metadata()
-    app.tja.distance = app.width - (412 * app.scale_factor)
+    app.tja.distance = (app.width + 100) - (412 * app.scale_factor)
     app.tja.fps = app.stepsPerSecond                                           
     app.wave_obj = sa.WaveObject.from_wave_file(app.tja.wave)
     app.notes, app.bars = app.tja.data_to_notes()
@@ -280,7 +280,7 @@ def check_note(app, note_type):
         
 def onKeyPress(app, key):
     if key == 'p':
-        play_tja(app, "Souryuu no Ran")
+        play_tja(app, "SUPERNOVA")
         app.start_ms = get_current_ms() - app.tja.offset*1000
     if key == 'a':
         app.autoplay = not app.autoplay

@@ -65,7 +65,6 @@ class tja_parser:
     def file_to_data(self):
         with open(self.file_path, 'rt', encoding='utf-8-sig') as tja_file:
             for line in tja_file:
-                #print(line)
                 line = stripComments(line).strip()
                 if line != '':
                     self.data.append(str(line))
@@ -120,17 +119,20 @@ class tja_parser:
             elif '#START' in item:
                 return [self.title, self.title_ja, self.subtitle, self.subtitle_ja, self.bpm, self.wave, self.offset, self.demo_start, self.course_data]
                 
-    def data_to_notes(self):
+    def data_to_notes(self, diff):
         self.file_to_data()
         
         #Get notes start and end (only works on highest difficulty right now)
         note_start = -1
         note_end = -1
+        diff_count = 6
         for i in range(len(self.data)):
             if self.data[i] == '#START':
                 note_start = i+1
             elif self.data[i] == '#END':
                 note_end = i
+                diff_count -= 1
+            if diff_count == diff:
                 break
                       
         notes = []
@@ -144,11 +146,11 @@ class tja_parser:
                 bar = []
         return notes
         
-    def notes_to_position(self):
+    def notes_to_position(self, diff):
         play_note_list = []
         bar_list = []
         draw_note_list = []
-        notes = self.data_to_notes()
+        notes = self.data_to_notes(diff)
         index = 0
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
@@ -200,7 +202,7 @@ class tja_parser:
                     if note != '0':
                         load_ms = note_ms - (self.distance / pixels_per_ms)
                         play_note_list.append({'note': note, 'ms': note_ms, 'load_ms': load_ms, 'ppf': pixels_per_frame, 'index': index})
-                        print({'note': note, 'ms': int(note_ms), 'load_ms': int(load_ms), 'ppf': int(pixels_per_frame), 'index': index})
+                        #print({'note': note, 'ms': int(note_ms), 'load_ms': int(load_ms), 'ppf': int(pixels_per_frame), 'index': index})
                         index += 1
                     self.current_ms += increment
                 
@@ -219,28 +221,27 @@ def loadSound(path):
     full_path = os.path.abspath(path)
     url = pathlib.Path(full_path).as_uri()
     return Sound(url)
-    
+
 def switchScreen(app, key):
     if key == '0':
-        sa.stop_all()
         setActiveScreen('title')
     elif key == '1':
-        sa.stop_all()
         setActiveScreen('entry')
-        sa.WaveObject.from_wave_file('Sounds/Title_start.wav').play().wait_done()
-        app.bg_music = sa.WaveObject.from_wave_file('Sounds/Title.wav').play()
     elif key == '2':
-        sa.stop_all()
         setActiveScreen('song_select')
-        sa.WaveObject.from_wave_file('Sounds/SongSelect_start.wav').play().wait_done()
-        app.bg_music = sa.WaveObject.from_wave_file('Sounds/SongSelect.wav').play()
-    elif key == '3':
         sa.stop_all()
+        app.song_select_bg_music_start = sa.WaveObject.from_wave_file('Sounds/SongSelect_start.wav').play().wait_done()
+        app.song_select_bg_music = sa.WaveObject.from_wave_file('Sounds/SongSelect.wav').play()
+    elif key == '3':
         setActiveScreen('game')
     elif key == '4':
-        sa.stop_all()
         setActiveScreen('result')
 
+def fps_manager(app):
+    app.current_ms = get_current_ms() - app.start_ms
+    app.fps_display = 1000 / (app.current_ms - app.last_ms)
+    app.last_ms = app.current_ms
+    
 def fps_counter(app):
     if app.fps_display >= 55:
         fps_color = 'green'

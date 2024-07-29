@@ -69,4 +69,5 @@ def result_onKeyPress(app, key):
         sa.stop_all()
         app.song_select_bg_music_start = sa.WaveObject.from_wave_file('Sounds/SongSelect_start.wav').play().wait_done()
         app.song_select_bg_music = sa.WaveObject.from_wave_file('Sounds/SongSelect.wav').play()
+        app.song_select_difficulty = False
     switchScreen(app, key)

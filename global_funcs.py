@@ -75,8 +75,9 @@ class tja_parser:
         diff_index = 1
         highest_diff = -1
         for item in self.data:
-            #print(item)
-            if 'SUBTITLEJA' in item: self.subtitle_ja = str(item.split('SUBTITLEJA:')[1])
+            if item[0] == '#':
+                continue
+            elif 'SUBTITLEJA' in item: self.subtitle_ja = str(item.split('SUBTITLEJA:')[1])
             elif 'TITLEJA' in item: self.title_ja = str(item.split('TITLEJA:')[1])
             elif 'SUBTITLE' in item: self.subtitle = str(item.split('SUBTITLE:')[1][2:])
             elif 'TITLE' in item: self.title = str(item.split('TITLE:')[1])
@@ -116,23 +117,21 @@ class tja_parser:
                     continue
                 item = int(item.split(':')[1])
                 self.course_data[diff_index+highest_diff].append(item)
-            elif '#START' in item:
-                return [self.title, self.title_ja, self.subtitle, self.subtitle_ja, self.bpm, self.wave, self.offset, self.demo_start, self.course_data]
+        return [self.title, self.title_ja, self.subtitle, self.subtitle_ja, self.bpm, self.wave, self.offset, self.demo_start, self.course_data]
                 
     def data_to_notes(self, diff):
         self.file_to_data()
-        
-        #Get notes start and end (only works on highest difficulty right now)
+        #Get notes start and end
         note_start = -1
         note_end = -1
-        diff_count = 6
+        diff_count = 0
         for i in range(len(self.data)):
             if self.data[i] == '#START':
                 note_start = i+1
             elif self.data[i] == '#END':
                 note_end = i
-                diff_count -= 1
-            if diff_count == diff:
+                diff_count += 1
+            if diff_count == len(self.course_data) - diff:
                 break
                       
         notes = []

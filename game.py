@@ -71,7 +71,7 @@ def game_onAppStart(app):
     app.game_draw_footer = CMUImage(Image.open(f'Graphics/5_Game/8_Footer/{background_number}.png'))
     
     app.game_draw_p1_gauge_base = CMUImage(Image.open('Graphics/7_Gauge/1P_base.png').crop((0, 0, 695, 43)))
-    app.game_draw_p1_gauge = CMUImage(Image.open('Graphics/7_Gauge/1P.png').crop((0, 0, app.game_p1_gauge_crop, 43)))
+    #app.game_draw_p1_gauge = CMUImage(Image.open('Graphics/7_Gauge/1P.png').crop((0, 0, app.game_p1_gauge_crop, 43)))
     app.game_draw_soul = CMUImage(Image.open('Graphics/7_Gauge/Soul.png').crop((0, 0, 80, 80)))
 
 def game_p1(app):
@@ -99,7 +99,6 @@ def game_p1(app):
     app.game_p1_bar_index = 0
     
     #Gauge management for p1
-    app.game_p1_gauge_index = 0
     app.game_p1_gauge_count = 0
     app.game_p1_gauge_crop = 1
     app.game_p1_clear = False
@@ -111,6 +110,8 @@ def game_p1(app):
     app.game_p1_combo = 0
     app.game_p1_score = 0
     app.game_p1_max_combo = 0
+    
+    app.game_draw_p1_gauge = CMUImage(Image.open('Graphics/7_Gauge/1P.png').crop((0, 0, 1, 43)))
     
 def play_tja(app, tja_folder):
     #Initialize p1
@@ -175,8 +176,8 @@ def game_get_position(app, ms, pixels_per_frame):
             
 def game_p1_note_manager(app):
     if app.game_p1_autoplay:
-        game_check_note(app, 1)
-        game_check_note(app, 2)
+        game_p1_check_note(app, 1)
+        game_p1_check_note(app, 2)
     #Add bar to current_bars list if it is ready to be shown on screen
     if app.game_p1_bar_index < len(app.song_bars) and app.current_ms > app.song_bars[app.game_p1_bar_index]['load_ms']:
         app.game_p1_current_bars.append(app.song_bars[app.game_p1_bar_index])
@@ -294,12 +295,11 @@ def game_p1_check_note(app, drum_type):
 
 def game_gauge_manager(app):
     gauge_bar_length = 14
-    app.game_p1_gauge_count = app.game_p1_good_count + (app.game_p1_ok_count/2)
+    app.game_p1_gauge_count = app.game_p1_good_count + (app.game_p1_ok_count/2) + (app.game_p1_bad_count * -2)
     if app.game_p1_gauge_count == 0:
         return
-    if int(app.game_p1_gauge_count) % math.floor(app.song_note_count / 63.391) == 0:
-        app.game_p1_gauge_index += 1
-    app.game_p1_gauge_crop = (app.game_p1_gauge_index*gauge_bar_length) + (app.game_p1_bad_count * -(gauge_bar_length/2))
+    gauge_bar = math.floor(app.song_note_count / 63.391)
+    app.game_p1_gauge_crop = ((app.game_p1_gauge_count // gauge_bar)*gauge_bar_length)
     if app.game_p1_gauge_crop > 0:
         app.game_draw_p1_gauge = CMUImage(Image.open('Graphics/7_Gauge/1P.png').crop((1, 0, app.game_p1_gauge_crop, 43)))
 

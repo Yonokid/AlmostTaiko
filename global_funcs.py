@@ -31,17 +31,17 @@ def get_pixels_per_frame(bpm, fps, time_signature, distance):
     total_time = time_signature * beat_duration
     total_frames = fps * total_time
     return (distance / total_frames) * (fps/60)
-   
+
 class tja_parser:
     def __init__(self, path):
         #Defined on startup
         self.folder_path = path
         self.folder_name = self.folder_path.split('\\')[-1]
         self.file_path = f'{self.folder_path}\\{self.folder_name}.tja'
-        
+
         #Defined on file_to_data()
         self.data = []
-        
+
         #Defined on get_metadata()
         self.title = ''
         self.title_ja = ''
@@ -51,17 +51,17 @@ class tja_parser:
         self.offset = 0
         self.demo_start = 0
         self.course_data = dict()
-        
+
         #Defined in metadata but can change throughout the chart
         self.bpm = 120
         self.time_signature = 4/4
-        
+
         self.distance = 0
         self.fps = 0
         self.scroll_modifier = 1
         self.current_ms = 0
         self.barline_display = True
-        
+
     def file_to_data(self):
         with open(self.file_path, 'rt', encoding='utf-8-sig') as tja_file:
             for line in tja_file:
@@ -69,7 +69,7 @@ class tja_parser:
                 if line != '':
                     self.data.append(str(line))
             return self.data
-    
+
     def get_metadata(self):
         self.file_to_data()
         diff_index = 1
@@ -86,12 +86,12 @@ class tja_parser:
             elif 'OFFSET' in item: self.offset = float(item.split(':')[1])
             elif 'DEMOSTART' in item: self.demo_start = float(item.split(':')[1])
             elif 'COURSE' in item:
-                course = str(item.split(':')[1]).lower()  
+                course = str(item.split(':')[1]).lower()
                 if course == 'edit' or course == '4':
                     self.course_data[4] = []
                 elif course == 'oni' or course == '3':
                     self.course_data[3] = []
-                elif course == 'hard' or course == '2':    
+                elif course == 'hard' or course == '2':
                     self.course_data[2] = []
                 elif course == 'normal' or course == '1':
                     self.course_data[1] = []
@@ -118,7 +118,7 @@ class tja_parser:
                 item = int(item.split(':')[1])
                 self.course_data[diff_index+highest_diff].append(item)
         return [self.title, self.title_ja, self.subtitle, self.subtitle_ja, self.bpm, self.wave, self.offset, self.demo_start, self.course_data]
-                
+
     def data_to_notes(self, diff):
         self.file_to_data()
         #Get notes start and end
@@ -132,8 +132,9 @@ class tja_parser:
                 note_end = i
                 diff_count += 1
             if diff_count == len(self.course_data) - diff:
+                print(diff_count)
                 break
-                      
+
         notes = []
         bar = []
         #Check for measures and separate when comma exists
@@ -144,8 +145,18 @@ class tja_parser:
                 notes.append(bar)
                 bar = []
         return notes
-        
+
     def notes_to_position(self, diff):
+        '''
+        self.current_ms = 0
+        self.time_signature = 4/4
+        self.bpm = 120
+        self.barline_display = True
+        self.scroll_modifier = 1
+
+        self.get_metadata()
+        '''
+
         play_note_list = []
         bar_list = []
         draw_note_list = []
@@ -154,7 +165,7 @@ class tja_parser:
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
-            
+
             for part in bar:
                 if '#MEASURE' in part:
                     divisor = part.find('/')
@@ -175,26 +186,26 @@ class tja_parser:
                 #Unrecognized commands will be skipped for now
                 elif '#' in part:
                     continue
-                    
+
                 #https://gist.github.com/KatieFrogs/e000f406bbc70a12f3c34a07303eec8b#measure
                 ms_per_measure = 60000 * (self.time_signature*4) / self.bpm
-                
+
                 #Determines how quickly the notes need to move across the screen to reach the judgment circle in time
                 pixels_per_frame = get_pixels_per_frame(self.bpm * self.time_signature * self.scroll_modifier, self.fps, self.time_signature*4, self.distance)
                 pixels_per_ms = pixels_per_frame / (1000 / self.fps)
-                
+
                 bar_ms = self.current_ms
                 load_ms = bar_ms - (self.distance / pixels_per_ms)
-                
+
                 if self.barline_display:
                     bar_list.append({'note': 'barline', 'ms': bar_ms, 'load_ms': load_ms, 'ppf': pixels_per_frame})
-                
+
                 #Empty bar is still a bar, otherwise start increment
                 if len(part) == 0:
                     self.current_ms += ms_per_measure
                 else:
                     increment = ms_per_measure / bar_length
-                
+
                 for note in part:
                     note_ms = self.current_ms
                     #Do not add blank notes otherwise lag
@@ -204,7 +215,7 @@ class tja_parser:
                         #print({'note': note, 'ms': int(note_ms), 'load_ms': int(load_ms), 'ppf': int(pixels_per_frame), 'index': index})
                         index += 1
                     self.current_ms += increment
-                
+
         # https://stackoverflow.com/questions/72899/how-to-sort-a-list-of-dictionaries-by-a-value-of-the-dictionary-in-python
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle
@@ -215,7 +226,7 @@ class tja_parser:
 
 def openImage(fileName):
         return Image.open(os.path.join(pathlib.Path(__file__).parent,fileName))
-        
+
 def loadSound(path):
     full_path = os.path.abspath(path)
     url = pathlib.Path(full_path).as_uri()
@@ -240,7 +251,7 @@ def fps_manager(app):
     app.current_ms = get_current_ms() - app.start_ms
     app.fps_display = 1000 / (app.current_ms - app.last_ms)
     app.last_ms = app.current_ms
-    
+
 def fps_counter(app):
     if app.fps_display >= 55:
         fps_color = 'green'

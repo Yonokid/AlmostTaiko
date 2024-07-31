@@ -3,6 +3,7 @@ from cmu_graphics import *
 from entry import *
 from song_select import *
 from game import *
+from game_2p import *
 from result import *
 
 def onAppStart(app):

@@ -5,9 +5,12 @@ import simpleaudio as sa
 from global_funcs import fps_counter, fps_manager, get_current_ms, switchScreen
 from song_select import onScreenSwitch_song_select
 
+#All images and sounds created by BANDAI NAMCO ENTERTAINMENT
+
 def onScreenSwitch_entry(app):
     app.entry_bg_music_start = sa.WaveObject.from_wave_file('Sounds/Title_start.wav').play().wait_done()
     app.entry_bg_music = sa.WaveObject.from_wave_file('Sounds/Title.wav').play()
+    app.ai_battle = False
 
 def entry_onAppStart(app):
     app.entry_draw_bg_image = CMUImage(Image.open('Graphics/1_Title/Background.png'))
@@ -97,10 +100,12 @@ def entry_onKeyPress(app, key):
     if key == 'enter':
         if app.entry_current_pos_x == 10:
             app.players = 1
+            app.ai_battle = False
             setActiveScreen('song_select')
             onScreenSwitch_song_select(app)
         elif app.entry_current_pos_x == 1300:
             app.players = 2
+            app.ai_battle = False
             setActiveScreen('song_select')
             onScreenSwitch_song_select(app)
         elif app.entry_current_pos_x == -1310:

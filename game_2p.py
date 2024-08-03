@@ -9,8 +9,9 @@ from global_funcs import *
 from result import onScreenSwitch_result
 from game import *
 
+#All images and sounds created by BANDAI NAMCO ENTERTAINMENT
+
 def game_2p_onAppStart(app):
-    app.player_2 = Player(2)
     app.game_2p_draw_background_up = CMUImage(Image.open('Graphics/5_Game/5_Background/Bg_up/2/Main2.PNG'))
     app.game_2p_draw_background_up_clear = CMUImage(Image.open('Graphics/5_Game/5_Background/Bg_up/2/Main_Clear2.png'))
     app.game_2p_draw_frame = CMUImage(Image.open('Graphics/5_Game/6_Taiko/2P_Frame.png'))
@@ -21,6 +22,7 @@ def game_2p_onAppStart(app):
 
 
 def p2_play_tja(app, tja_folder):
+    app.player_2 = Player(2)
     app.tja2 = tja_parser(tja_folder)
     app.tja2.get_metadata()
     app.tja2.distance = app.width - app.game_judge_x
@@ -46,6 +48,14 @@ def game_2p_onStep(app):
 
     if app.game_result_delay != 0:
         game_song_finished(app)
+    game_judge_display(app)
+    game_p2_judge_display(app)
+
+def game_p2_judge_display(app):
+    if app.player_2.judge_timer + 200 <= app.current_ms:
+        app.player_2.good = False
+        app.player_2.ok = False
+        app.player_2.bad = False
 
 def game_2p_draw_background(app):
     if app.player_1.gauge_crop < 550:
@@ -79,19 +89,18 @@ def game_2p_draw_judgments(app):
     elif app.player_2.bad: drawLabel('BAD', app.game_judge_x, 462, size=30, fill=gradient('deepSkyBlue','royalBlue','indigo', start='bottom'), bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=2.5)
 
 def game_2p_draw_drum(app):
-    drawImage(app.game_2p_draw_background, 0, 359)
-    drawImage(app.game_draw_drum, 190, 386)
+    drum_x = 205
+    drawImage(app.game_draw_drum, drum_x, 386)
     if app.player_2.inner_drum_L:
-        drawImage(app.game_draw_red_L, 190, 386)
+        drawImage(app.game_draw_red_L, drum_x, 386)
     if app.player_2.inner_drum_R:
-        drawImage(app.game_draw_red_R, 190+59, 386)
+        drawImage(app.game_draw_red_R, drum_x+59, 386)
     if app.player_2.outer_drum_L:
-        drawImage(app.game_draw_blue_L, 190, 386)
+        drawImage(app.game_draw_blue_L, drum_x, 386)
     if app.player_2.outer_drum_R:
-        drawImage(app.game_draw_blue_R, 190+59, 386)
+        drawImage(app.game_draw_blue_R, drum_x+59, 386)
     if 10 <= app.player_2.combo:
-        drawLabel(app.player_2.combo, 250, 426, size=50, fill=gradient('red', 'orange', 'yellow', start='bottom'), bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=3)
-    drawLabel(app.player_2.score, 190, 510, align='right', size=35, border='black', fill='white', borderWidth=3, bold=True, font='DFPKanTeiRyu-XB')
+        drawLabel(app.player_2.combo, drum_x+60, 426, size=50, fill=gradient('red', 'orange', 'yellow', start='bottom'), bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=3)
 
 def game_2p_redrawAll(app):
     game_2p_draw_background(app)
@@ -105,6 +114,8 @@ def game_2p_redrawAll(app):
     app.player_1.draw_arc(app)
     app.player_2.draw_arc(app)
 
+    drawImage(app.game_2p_draw_background, 0, 359)
+    drawLabel(app.player_2.score, 190, 510, align='right', size=35, border='black', fill='white', borderWidth=3, bold=True, font='DFPKanTeiRyu-XB')
     game_draw_drum(app)
     game_2p_draw_drum(app)
     app.player_1.draw_judgments(app)

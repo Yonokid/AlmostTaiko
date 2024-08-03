@@ -4,6 +4,9 @@ import simpleaudio as sa
 import os
 import random as rand
 import math
+from collections import deque
+
+#All images and sounds created by BANDAI NAMCO ENTERTAINMENT
 
 from global_funcs import *
 from result import onScreenSwitch_result
@@ -67,6 +70,8 @@ def game_onAppStart(app):
     #app.game_draw_gauge = CMUImage(Image.open('Graphics/7_Gauge/1P.png').crop((0, 0, app.game_p1_gauge_crop, 43)))
     app.game_draw_soul = CMUImage(Image.open('Graphics/5_Game/7_Gauge/Soul.png').crop((0, 0, 80, 80)))
 
+    app.judge_timer = 0
+
 class Player:
     def __init__(self, player_number):
         self.player_number = player_number
@@ -75,6 +80,7 @@ class Player:
         self.ok = False
         self.bad = False
         self.autoplay = False
+        self.judge_timer = 0
 
         #Drum Display
         self.inner_drum_L = False
@@ -83,10 +89,15 @@ class Player:
         self.outer_drum_R = False
 
         #This will be changable in the future
-        self.judge_offset = 30
+        #Guide:
+        #PC Speakers = 30
+        #External Speaker = 60
+        #Creston Keyboard = 60
+        #Creston Drum = 75
+        self.judge_offset = 75
 
         #Note management for p1
-        self.current_notes = []
+        self.current_notes = deque()
         self.current_bars = []
         self.current_notes_draw = []
         self.play_note_index = 0
@@ -116,6 +127,11 @@ class Player:
         else:
             self.draw_gauge = CMUImage(Image.open('Graphics/5_Game/7_Gauge/2P.png').crop((0, 0, 1, 43)))
 
+        #AI Battle display
+        self.section_good_count = 0
+        self.section_ok_count = 0
+        self.section_bad_count = 0
+
     def get_position(self, app, ms, pixels_per_frame):
         return pixels_per_frame * app.stepsPerSecond / 1000 * (ms - app.current_ms + self.judge_offset)
 
@@ -143,8 +159,12 @@ class Player:
                 if note['note'] not in app.game_ignored_notes:
                     self.combo = 0
                     self.bad_count += 1
+                    self.section_bad_count += 1
                     self.game_check_end(app, note['index'])
-                self.current_notes.pop(0)
+                self.current_notes.popleft()
+                if app.ai_battle and self.player_number == 2:
+                    if app.section_crop < 120:
+                        app.section_crop +=  120 / app.sections[0]
 
         #If a bar is off screen, remove it
         if len(self.current_bars) != 0:
@@ -191,7 +211,7 @@ class Player:
         self.gauge_manager(app)
         self.game_check_end(app, index)
 
-        self.current_notes.pop(0)
+        self.current_notes.popleft()
 
         #Remove note from the screen
         for note in range(len(self.current_notes_draw)):
@@ -215,27 +235,40 @@ class Player:
 
             if (note_ms - app.timing_good) + self.judge_offset <= app.current_ms <= (note_ms + app.timing_good) + self.judge_offset:
                 self.good = True
+                self.judge_timer = app.current_ms
                 self.good_count += 1
+                self.section_good_count += 1
                 self.score += app.song_base_score
                 self.note_correct(app, self.current_notes[0])
 
             elif (note_ms - app.timing_ok) + self.judge_offset <= app.current_ms <= (note_ms + app.timing_ok) + self.judge_offset:
                 self.ok = True
+                self.judge_timer = app.current_ms
+                self.good = False
                 self.ok_count += 1
+                self.section_ok_count += 1
                 self.score += 10 * math.floor(app.song_base_score / 2 / 10)
                 self.note_correct(app, self.current_notes[0])
 
             elif (note_ms - app.timing_bad) + self.judge_offset <= app.current_ms <= (note_ms + app.timing_bad) + self.judge_offset:
                 self.combo = 0
+                self.judge_timer = app.current_ms
                 self.bad = True
+                self.ok = False
+                self.good = False
                 self.bad_count += 1
+                self.section_bad_count += 1
                 self.game_check_end(app, self.current_notes[0]['index'])
 
     def draw_judgments(self, app):
         if self.player_number == 1:
-            y = 162
+            y = 182 - ((app.current_ms - self.judge_timer)*0.7)
+            if y <= 140:
+                y = 150
         else:
-            y = 324
+            y = 364 - ((app.current_ms - self.judge_timer)*0.7)
+            if y <= 324:
+                y = 334
         if self.autoplay: drawLabel('AUTO', app.game_judge_x, y, size=30, fill='white', bold=True, border='black')
         elif self.good: drawLabel('GOOD', app.game_judge_x, y, size=30, fill=gradient('red', 'orange', 'yellow', start='bottom'), bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=2.5)
         elif self.ok: drawLabel('OK', app.game_judge_x, y, size=30, fill='white', bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=2.5)
@@ -279,8 +312,8 @@ class Player:
 
     def draw_arc(self, app):
         if len(self.draw_arc_dict) != 0:
-                for start_frame in self.draw_arc_dict:
-                    self.draw_note_arc(game_get_note_type(self.draw_arc_dict[start_frame]), self.draw_current_frame, start_frame, self.draw_arc_points)
+            for start_frame in self.draw_arc_dict:
+                self.draw_note_arc(game_get_note_type(self.draw_arc_dict[start_frame]), self.draw_current_frame, start_frame, self.draw_arc_points)
 
     def gauge_manager(self, app):
         gauge_bar_length = 14
@@ -340,7 +373,15 @@ def game_animate_notes(app):
 def game_song_finished(app):
     if app.current_ms >= app.game_result_delay + 2000:
         if app.player_1.bad_count == 0:
-            sa.WaveObject.from_wave_file('Sounds/Full combo.wav').play().wait_done()
+            if app.ai_battle:
+                sa.WaveObject.from_wave_file('Sounds/AI_battle_full_combo.wav').play().wait_done()
+            else:
+                sa.WaveObject.from_wave_file('Sounds/Full combo.wav').play().wait_done()
+        elif app.ai_battle:
+            if app.section_wins.count(True) >= 3:
+                sa.WaveObject.from_wave_file('Sounds/AI_battle_win.wav').play().wait_done()
+            elif app.section_wins.count(False) >= 3:
+                sa.WaveObject.from_wave_file('Sounds/AI_battle_lose.wav').play().wait_done()
         elif app.player_1.gauge_crop >= 545:
             sa.WaveObject.from_wave_file('Sounds/Clear.wav').play().wait_done()
         else:
@@ -358,6 +399,13 @@ def game_onStep(app):
 
     if app.game_result_delay != 0:
         game_song_finished(app)
+    game_judge_display(app)
+
+def game_judge_display(app):
+    if app.player_1.judge_timer + 200 <= app.current_ms:
+        app.player_1.good = False
+        app.player_1.ok = False
+        app.player_1.bad = False
 
 def game_get_note_type(note):
     if note == '1':
@@ -402,18 +450,19 @@ def game_draw_lane(app):
     drawImage(app.game_draw_judge_circle, 359, 203)
 
 def game_draw_drum(app):
+    drum_x = 205
     drawImage(app.game_draw_background, 0, 184)
-    drawImage(app.game_draw_drum, 190, 210)
+    drawImage(app.game_draw_drum, drum_x, 210)
     if app.player_1.inner_drum_L:
-        drawImage(app.game_draw_red_L, 190, 210)
+        drawImage(app.game_draw_red_L, drum_x, 210)
     if app.player_1.inner_drum_R:
-        drawImage(app.game_draw_red_R, 190+59, 210)
+        drawImage(app.game_draw_red_R, drum_x+59, 210)
     if app.player_1.outer_drum_L:
-        drawImage(app.game_draw_blue_L, 190, 210)
+        drawImage(app.game_draw_blue_L, drum_x, 210)
     if app.player_1.outer_drum_R:
-        drawImage(app.game_draw_blue_R, 190+59, 210)
+        drawImage(app.game_draw_blue_R, drum_x+59, 210)
     if 10 <= app.player_1.combo:
-        drawLabel(app.player_1.combo, 250, 250, size=50, fill=gradient('red', 'orange', 'yellow', start='bottom'), bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=3)
+        drawLabel(app.player_1.combo, drum_x+60, 250, size=50, fill=gradient('red', 'orange', 'yellow', start='bottom'), bold=True, border='black', font='DFPKanTeiRyu-XB', borderWidth=3)
     drawLabel(app.player_1.score, 190, 208, align='right', size=35, border='black', fill='white', borderWidth=3, bold=True, font='DFPKanTeiRyu-XB')
 
 def game_draw_gauge(app):
@@ -428,7 +477,6 @@ def game_redrawAll(app):
 
     #draw notes and bars
     app.player_1.spawn_notes(app)
-    drawImage(app.game_draw_background, 0, 184)
     #Draw arc
     app.player_1.draw_arc(app)
 
@@ -440,6 +488,12 @@ def game_redrawAll(app):
 def game_onKeyPress(app, key):
     if key == 'a':
         app.player_1.autoplay = not app.player_1.autoplay
+    elif key == 'escape':
+        sa.stop_all()
+        app.sfx_cancel.play().wait_done()
+        app.song_1p_confirmed = False
+        app.song_2p_confirmed = False
+        setActiveScreen('song_select')
     if not app.player_1.autoplay:
         if key == 'f':
             app.player_1.inner_drum_L = True
@@ -456,14 +510,8 @@ def game_onKeyPress(app, key):
 
 def game_onKeyRelease(app, key):
     if key == 'f' or key == 'j':
-        app.player_1.good = False
-        app.player_1.ok = False
-        app.player_1.bad = False
         app.player_1.inner_drum_L = False
         app.player_1.inner_drum_R = False
     if key == 'e' or key == 'i':
-        app.player_1.good = False
-        app.player_1.ok = False
-        app.player_1.bad = False
         app.player_1.outer_drum_L = False
         app.player_1.outer_drum_R = False

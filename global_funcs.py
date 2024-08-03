@@ -5,6 +5,8 @@ import pathlib
 from PIL import Image
 import simpleaudio as sa
 
+#TJA Format creator is unknown. I did not create the format, but I did write the parser though.
+
 def get_current_ms():
     return rounded(time.time() * 1000)
 
@@ -132,7 +134,6 @@ class tja_parser:
                 note_end = i
                 diff_count += 1
             if diff_count == len(self.course_data) - diff:
-                print(diff_count)
                 break
 
         notes = []
@@ -203,6 +204,7 @@ class tja_parser:
                 #Empty bar is still a bar, otherwise start increment
                 if len(part) == 0:
                     self.current_ms += ms_per_measure
+                    increment = 0
                 else:
                     increment = ms_per_measure / bar_length
 
